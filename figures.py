@@ -1,7 +1,6 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import utils
 
 from tracking import get_koopman_VDP
 from tracking import define_autoencoder_structure
@@ -87,8 +86,7 @@ def koopman_distance_plots():
     Files are saved in the `fig1` directory.
     """
     # Configure matplotlib
-    font = {'family' : 'normal',
-            'size'   : 18}
+    font = {'size': 18}
     matplotlib.rc('font', **font)
 
     # Set the parameters used in the manuscript
@@ -192,16 +190,17 @@ def encoder_plots(encode_train, encode_interpolated):
 
 
 
-def switching_montecarlo_plot(error_table, error_ntable, error_nei, win_fixed, time_delay, delay_keep):
+def switching_tracking_plot(error_table, error_ntable, error_nei, win_fixed, time_delay, delay_keep, filename):
     """Generate the Monte Carlo plot
 
     Args:
         error_table: SLDS operator error
         error_ntable: SLDS operator error with known prior
         error_nei: neighborhood search operator error
-        Win_fixed:
+        win_fixed:
         time_delay:
         delay_keep:
+        filename:
     """
 
     plt.figure(figsize = (12/1.2,8/1.2))
@@ -213,10 +212,11 @@ def switching_montecarlo_plot(error_table, error_ntable, error_nei, win_fixed, t
     plt.ylabel('dynamic operator error')
     plt.grid()
     for i in range(2,10):
-        line_position = i*Win_fixed-(time_delay+delay_keep)
+        line_position = i*win_fixed-(time_delay+delay_keep)
         plt.axvline(line_position, ls = '--', alpha = .5,color = 'black')
-        plt.savefig('fig2/MC_nei_search_final.pdf')
-        plt.show()
+    filepath = "fig2/" + filename
+    plt.savefig(filepath)
+    plt.show()
 
 
 def compute_tracking_error(Atilde, embedded_train, mu_vals, decoder):
@@ -243,21 +243,26 @@ def compute_tracking_error(Atilde, embedded_train, mu_vals, decoder):
     window_params = time_delay, delay_keep, T, index_0
 
     ### Simulate the System
+    print("Simulating System")
     timeseries, koopman_operators = simulate_switching_system(mu_vals, win_fixed, sig_y)
 
 
     # Evaluate three competing methods
+    print("ML detection")
     learned_A_switching     = maximum_likelihood_windowed_detection(timeseries, Atilde, window_params)
+    print("Prior Detection")
     learned_A_prior         = prior_windowed_detection(timeseries, Atilde,  window_params)
+    print("Autoencoder Detection")
     learned_A_local_search  = latent_windowed_detection(timeseries, embedded_train, decoder, window_params)
 
     ### Compute errors
+    print("Computing Error")
     error_A_switching = []
     error_A_prior = []
     error_A_local_search = []
 
     for i in range(time_delay+delay_keep,T):
-        estimate_index = i-time_delay-time_delay
+        estimate_index = i-time_delay-delay_keep
 
         ground_truth       = koopman_operators[i, :, :]
         estimate_switching = learned_A_switching[estimate_index,:,:]

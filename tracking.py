@@ -117,7 +117,8 @@ def train_autoencoder(autoencoder, Atilde):
     autoencoder.fit(Atilde,
                     Atilde,
                     epochs=500,
-                    batch_size=32, validation_split=0.10)
+                    batch_size=32, 
+                    validation_split=0.10)
 
 
 def generate_cubic_curve(encoder, Atilde):
@@ -241,7 +242,7 @@ def construct_cubic_interpolation(Atilde):
 
 
 
-def maximum_likelihood_windowed_detection_point(timeseries, timeindex, Atilde):
+def maximum_likelihood_windowed_detection_point(timeseries, timeindex, Atilde, window_params):
     """Detect system in a window based on maximum likelihood
 
     Args:
@@ -254,8 +255,7 @@ def maximum_likelihood_windowed_detection_point(timeseries, timeindex, Atilde):
     """
 
     # Set the parameters
-    time_delay = 55
-    delay_keep = 50
+    time_delay, delay_keep, T, index_0 = window_params
     N = 50
 
     # Get overlapping sequences offset by 1
@@ -330,7 +330,6 @@ def latent_windowed_detection_point(timeseries, timeindex, current_latent, inter
         timeindex: Starting index of the window
         current_latent: current latent space point
         interpolation: interpolation function for Atilde
-        embedded_train: Candidate linear dynamical systems
         decoder: Autoencoder decoder
 
     Returns:
@@ -339,12 +338,12 @@ def latent_windowed_detection_point(timeseries, timeindex, current_latent, inter
 
     # Set the parameters
     time_delay = 55
-    delay_keep = 50
+    delay_keep = 100
     search_radius = 2
     dim = 6
     search_radius = 0.02
     neighbor_count = 21
-    
+
     state_previous = []
     state_current = []
     for k in range(delay_keep):
@@ -363,8 +362,8 @@ def latent_windowed_detection_point(timeseries, timeindex, current_latent, inter
     neighborhood.append(center)
     neighborhood.append(upper)
 
-
     neighborhood = np.array(neighborhood)
+
     minimum_error = 1e10
 
     # This doesn't seem to check the last three elements
@@ -373,14 +372,7 @@ def latent_windowed_detection_point(timeseries, timeindex, current_latent, inter
         latent_point = np.array(interpolation(neighborhood[j]))
         latent_point = latent_point.reshape(1,dim)
 
-        decoded_operator = decoder.predict(latent_point,verbose=0).reshape(time_delay,time_delay)
-
-        ################################
-        # This shouldn't be needed I don't think.
-        # Aren't the interpolation functions consistent with the input data?
-#        if current_latent%.02==0:
-#                decoded_operator = Atilde[current_latent//.02,:,:]
-        ################################
+        decoded_operator = decoder(latent_point).numpy().reshape(time_delay,time_delay)
 
         current_error = np.linalg.norm(state_current - decoded_operator@state_previous)
         if current_error<minimum_error:
@@ -475,7 +467,7 @@ def maximum_likelihood_windowed_detection(timeseries, Atilde,  window_params):
 
     # Construct the sequence of windowed ML detections
     for i in range(time_delay+delay_keep,T):
-        best_index = maximum_likelihood_windowed_detection_point(timeseries, i, Atilde)
+        best_index = maximum_likelihood_windowed_detection_point(timeseries, i, Atilde, window_params)
         learned_A_sw.append(Atilde[best_index,:,:])
 
     return np.array(learned_A_sw)
