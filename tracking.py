@@ -249,6 +249,7 @@ def maximum_likelihood_windowed_detection_point(timeseries, timeindex, Atilde, w
         timeseries: The full dataset
         timeindex: Starting index of the window
         Atilde: Candidate linear dynamical systems
+        windowparams: A tuple of parameters regarding the windows.
 
     Returns:
         The index of the best fit linear system according to ML detection.
@@ -322,7 +323,7 @@ def prior_windowed_detection_point(timeseries, timeindex, previous_mode, Atilde)
     return best_index
     
 
-def latent_windowed_detection_point(timeseries, timeindex, current_latent, interpolation, embedded_train, decoder):
+def latent_windowed_detection_point(timeseries, timeindex, current_latent, interpolation, decoder):
     """Detect system in a window based on the latent space tracking
 
     Args:
@@ -439,7 +440,6 @@ def latent_windowed_detection(timeseries, embedded_train, decoder, window_params
                                                                         i,
                                                                         current_latent,
                                                                         interpolation,
-                                                                        embedded_train,
                                                                         decoder)
         learned_A_local_search.append(A_estimate)
 

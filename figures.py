@@ -84,6 +84,15 @@ def plot_koopman_eigen_similarity(similarities, distances, rank):
 def koopman_distance_plots():
     """Generates Figures 1 (a-c) in the manuscript.
     Files are saved in the `fig1` directory.
+
+    Returns:
+        A tuple (Atilde, mu_vals, decoder, encode_train) containing
+        the required results for the later simulations. Where
+        Atilde is the set of switching linear modes, mu_vals is the
+        set of Van der Pol oscillator parameters, decoder is the
+        decoder half of a Tensorflow autoencoder, and encode_train
+        is the set of linear systems Atilde passed through the
+        encoder.
     """
     # Configure matplotlib
     font = {'size': 18}
@@ -162,8 +171,8 @@ def encoder_plots(encode_train, encode_interpolated):
     Args:
         encode_train: Input samples for the encoder
         encode_interpolated: Fitted points from the interpolation
-
     """
+
     ax = plt.axes(projection ='3d')
 
     ax.figure.set_size_inches(8/1.2, 8/1.2)
@@ -197,10 +206,10 @@ def switching_tracking_plot(error_table, error_ntable, error_nei, win_fixed, tim
         error_table: SLDS operator error
         error_ntable: SLDS operator error with known prior
         error_nei: neighborhood search operator error
-        win_fixed:
-        time_delay:
-        delay_keep:
-        filename:
+        win_fixed: Time between mode switches
+        time_delay: Time offset
+        delay_keep: Time offset
+        filename: The filename for the plot
     """
 
     plt.figure(figsize = (12/1.2,8/1.2))
@@ -224,9 +233,10 @@ def compute_tracking_error(Atilde, embedded_train, mu_vals, decoder):
     applied to a Van der Pol oscillator with a time-varying parameter.
 
     Args:
-        Atilde:
-        mu_vals:
-        decoder:
+        Atilde: The set of linear systems in the switching model
+        embedded_train: The embeddings of Atilde through an autoencoder
+        mu_vals: The associated set of parameters in teh Van der Pol oscillator
+        decoder: The decoder of the autoencoder
 
     Returns:
         A tuple (error_A_switching, error_A_prior, error_A_local_search) corresponding
@@ -243,20 +253,15 @@ def compute_tracking_error(Atilde, embedded_train, mu_vals, decoder):
     window_params = time_delay, delay_keep, T, index_0
 
     ### Simulate the System
-    print("Simulating System")
     timeseries, koopman_operators = simulate_switching_system(mu_vals, win_fixed, sig_y)
 
 
     # Evaluate three competing methods
-    print("ML detection")
     learned_A_switching     = maximum_likelihood_windowed_detection(timeseries, Atilde, window_params)
-    print("Prior Detection")
     learned_A_prior         = prior_windowed_detection(timeseries, Atilde,  window_params)
-    print("Autoencoder Detection")
     learned_A_local_search  = latent_windowed_detection(timeseries, embedded_train, decoder, window_params)
 
     ### Compute errors
-    print("Computing Error")
     error_A_switching = []
     error_A_prior = []
     error_A_local_search = []
@@ -284,9 +289,10 @@ def montecarlo_tracking_error(Atilde, embedded_train, mu_vals, decoder):
        time-varying parameter.
 
     Args:
-        Atilde:
-        mu_vals:
-        decoder:
+        Atilde: The set of linear systems in the switching model
+        embedded_train: The embeddings of Atilde through an autoencoder
+        mu_vals: The associated set of parameters in teh Van der Pol oscillator
+        decoder: The decoder of the autoencoder
 
     Returns:
         A tuple (error_table, error_ntable, error_nei) corresponding
